@@ -1,0 +1,160 @@
+.\" Copyright (c) 2016  Peter Pentchev
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd April 23, 2016
+.Dt GANG-BOSS 1
+.Os
+.Sh NAME
+.Nm gang-boss
+.Nd the overseer of the Git-and-no-Git backup system
+.Sh SYNOPSIS
+.Nm
+.Op Fl Nv
+.Fl r Ns = Ns Ar username@hostname
+.Fl p Ns = Ns Ar origin-path
+.Cm init
+.Ar path
+.Nm
+.Op Fl Nv
+.Fl l
+.Fl p Ns = Ns Ar origin-path
+.Nm
+.Op Fl Nv
+.Cm sync-not-git
+.Ar path
+.Nm
+.Op Fl Nv
+.Cm sync-git
+.Ar path
+.Nm
+.Op Fl V | Fl h
+.Sh DESCRIPTION
+The
+.Nm
+utility is the main entry point of the
+.Nm Git-or-no-Git
+.Pq Nm gang
+backup system.
+It creates and maintains two separate directory trees, one containing
+all the files and directories of the backed-up tree that are not part of
+Git repositories, and the other containing the Git repositories
+themselves.
+The former files and directories are maintained in a Git repository
+controlled by the
+.Xr gang 5
+tools (usually
+.Nm
+itself), and the latter are copied as they are with the assumption that
+they will themselves contain the historical record.
+.Pp
+The
+.Nm
+utility accepts the following command-line options:
+.Bl -tag -width indent
+.It Fl h
+Display program usage information and exit.
+.It Fl l
+Specify that the site to be backed up is accessible locally at the path
+specified by the
+.Fl p
+option.
+.It Fl N
+No-operation mode - do not perform any changes, simply report what would
+have been done.
+.It Fl p
+Specify the path (usually relative to the user's home directory or, if
+the
+.Fl l
+option is specified, to the current directory) of the site to be backed up.
+.It Fl r
+Specify the username and hostname of the remote site to be backed up.
+.It Fl V
+Display program version information and exit.
+.It Fl v
+Verbose mode - display information about the actions performed.
+.El
+.Pp
+FIXME: document the actual
+.Cm init ,
+.Cm sync-not-git ,
+and
+.Cm sync-git
+commands.
+.Sh ENVIRONMENT
+The operation of the
+.Nm
+utility is not directly influenced by any environment variables.
+.Sh FILES
+The operation of the
+.Nm
+utility is not directly influenced by the contents of any files.
+Bullshit on that, it's controlled by some internal files in
+the shadow directory, but I'm not sure if I want to explain that.
+.Sh EXAMPLES
+Prepare and create a backup tree controlled by
+.Nm gang :
+.Pp
+.Dl mkdir mysite
+.Dl rsync -az jrl@example.com:vhosts/mysite/ mysite/
+.Dl gang-boss -r jrl@example.com -p vhosts/mysite init mysite
+.Pp
+.Po
+the
+.Pa gang-mysite
+directory will be created to keep some internal information and
+a copy of all the Git repositories found within the
+.Pa vhosts/mysite
+directory on the remote host
+.Pc
+.Pp
+Synchronize the files and directories outside of the Git repositories:
+.Pp
+.Dl gang-boss sync-not-git mysite
+.Pp
+Synchronize the Git repositories themselves:
+.Pp
+.Dl gang-boss sync-git mysite
+.Pp
+.Sh DIAGNOSTICS
+.Ex -std
+.Sh SEE ALSO
+.Xr gang-member 1 ,
+.Xr git 1 ,
+.Xr rsync 1 ,
+.Xr gang 5
+.Sh STANDARDS
+No standards were harmed during the production of the
+.Nm
+utility.
+.Sh HISTORY
+The
+.Nm
+utility was written by Peter Pentchev in 2016.
+.Sh AUTHORS
+.An Peter Pentchev
+.Aq roam@ringlet.net
+.Sh BUGS
+No, thank you :)
+But if you should actually find any, please report them
+to the author.
