@@ -100,10 +100,8 @@ sub gang-load-config(IO::Path:D $gang-path, Str:D $path) returns GANG::Config:D
 		note-fatal "A GANG operation is in progress on $path: " ~ $gang-path.child('stage').slurp.chomp;
 	}
 
-	# Bah, work around a Serialize::Naive limitation WRT 'remote'
-	my %data = from-json $gang-path.child('meta.json').slurp;
-	%data<remote> = Str if %data<remote> eq '';
-	return GANG::Config.deserialize(%data);
+	return GANG::Config.deserialize(
+	    from-json $gang-path.child('meta.json').slurp);
 }
 
 multi sub MAIN(Bool :$h, Bool :$V)
@@ -138,10 +136,9 @@ multi sub MAIN('init', Str $path, Bool :$v, Bool :$l, Str :$r, Str :$p)
 	debug "Creating the GANG directory $gang-dir";
 	$gang-dir.mkdir;
 	
-	# Bah, work around a Serialize::Naive limitation WRT 'remote'
 	my GANG::Config $cfg .= new(
 		:path($path),
-		:remote($r // ''),
+		:remote($r),
 		:origin($origin),
 		:generation(0),
 		:tstamp($tstamp),
