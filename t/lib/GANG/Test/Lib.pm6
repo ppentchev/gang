@@ -4,7 +4,7 @@ use GANG::Lib;
 
 sub run-check(Str:D $path, Str:D $back, *@cmd) is export returns Bool:D
 {
-	my GANG::Command-Output $r .= capture(|@cmd);
+	my Shell::Capture $r .= capture(|@cmd);
 	if $r.exitcode != 0 {
 		note-fatal "'" ~ @cmd ~ "' failed in $path";
 		chdir $back;

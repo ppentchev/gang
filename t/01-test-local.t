@@ -32,7 +32,7 @@ ok !'stuff/repo/.git'.IO.d, 'The GANG backup does not have the Git repository fr
 ok 'gang-stuff/git/repo/.git'.IO.d, 'The GANG backup moved a Git repository';
 
 chdir 'stuff';
-my GANG::Command-Output:D $r .= capture('env', 'LANG=C', 'git', 'status', '--short');
+my Shell::Capture:D $r .= capture('env', 'LANG=C', 'git', 'status', '--short');
 is $r.exitcode, 0, 'stuff: git status --short succeeded';
 is $r.lines.elems, 0, 'stuff: git status --short output nothing';
 

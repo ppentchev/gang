@@ -191,7 +191,7 @@ multi sub MAIN('sync-not-git', Str $path, Bool :$v)
 	# First let's make sure our copy is at least hopefully good
 	debug "Resetting the files in $path to our last Git state, just in case";
 	chdir $path;
-	my GANG::Command-Output $r .= capture-check('git', 'reset', '--hard');
+	my Shell::Capture $r .= capture-check('git', 'reset', '--hard');
 	$r .= capture-check('git', 'status', '--short');
 	my Str:D @extra;
 	for $r.lines -> Str:D $line {

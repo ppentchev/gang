@@ -1,6 +1,6 @@
 unit module GANG::Lib;
 
-use GANG::Command-Output;
+use Shell::Capture;
 
 sub note-fatal(Str:D $s) is export
 {

@@ -8,7 +8,7 @@ use GANG::Lib;
 
 method find-git-files() returns Array[Str:D]
 {
-	my GANG::Command-Output:D $r .= capture(
+	my Shell::Capture:D $r .= capture(
 	    'find', $!path, '-name', '.git*', '-print', '-prune');
 	if $r.exitcode != 0 {
 		die "Could not find the Git files in " ~ $!path;
