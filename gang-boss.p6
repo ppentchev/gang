@@ -255,5 +255,59 @@ multi sub MAIN('sync-git', Str $path, Bool :$v)
 {
 	$debug = $v;
 	tstamp-init;
-	...
+
+	my Str:D $cwd = '.'.IO.abspath;
+	my Str:D $path-abs = $path.IO.abspath;
+	my IO::Path:D $gang-path = "gang-$path".IO;
+	my Str:D $gang-abs = $gang-path.abspath;
+
+	my GANG::Config:D $cfg = gang-load-config $gang-path, $path;
+	$gang-path.child('stage').spurt('sync-not-git');
+	$cfg .= bump($tstamp);
+
+	# OK, figure out what's the state of the Git repositories
+	my Str:D @current-git-files = GANG::Member.new(:path(~$gang-path.child('git'))).find-git-files;
+	my Str:D @new-git-files;
+	if $cfg.remote.defined {
+		...
+	} else {
+		@new-git-files = GANG::Member.new(:path($cfg.origin)).find-git-files;
+	}
+	debug "Got @current-git-files.elems() stored Git-related files, @new-git-files.elems() at the new site";
+
+	# Remove the ones that are no longer relevant
+	my Set $removed = Set(@current-git-files) ∖ Set(@new-git-files);
+	if $removed {
+		debug "- removing $removed.elems() Git-related files";
+		my IO::Path:D $src = $gang-path.child('git');
+		my IO::Path:D $dst = $gang-path.child(
+		    sprintf('git-removed/%03d-%s', $cfg.generation, $cfg.tstamp))
+		    .IO;
+		for $removed.keys -> Str:D $git-path {
+			debug "  - $git-path";
+			$dst.child($git-path).parent.mkdir;
+			$src.child($git-path).rename($dst.child($git-path));
+		}
+	} else {
+		debug 'No Git files or directories to remove';
+	}
+
+	# Now sync the new ones
+	debug "Synching Git files and repositories";
+	my IO::Path:D $src = $cfg.origin.IO;
+	my IO::Path:D $dst = $gang-path.child('git');
+	for @new-git-files -> Str:D $git-path {
+		debug "- $git-path";
+		my Str:D $source-prefix = $cfg.remote.defined?? $cfg.remote ~ ':'!! '';
+		my Str:D @cmd = ('rsync', '-a', '--delete',
+		    $source-prefix ~ $src.child($git-path) ~ '/',
+		    $dst.child($git-path) ~ '/');
+		$dst.child($git-path).parent.mkdir;
+		my Shell::Capture $r .= capture-check(
+		    :message("Could not sync the $git-path Git artifact"),
+		    |@cmd);
+	}
+
+	$gang-path.child('meta.json').spurt(to-json($cfg.serialize) ~ "\n");
+	$gang-abs.IO.child('stage').unlink;
 }

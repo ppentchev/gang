@@ -60,6 +60,13 @@ sub modify-origin-site() is export returns Bool:D
 	return False unless run-check 'vhosts/stuff/more/another-repo', '../../../..', 'git', 'rm', 'hell.txt';
 	return False unless run-check 'vhosts/stuff/more/another-repo', '../../../..', 'git', 'commit', '-m', 'begone';
 
+	'../yet-another-repo'.IO.mkdir;
+	chdir '../yet-another-repo';
+	'had-enough.txt'.IO.spurt("Sigh, what now?\n");
+	return False unless run-check 'vhosts/stuff/more/yet-another-repo', '../../../..', 'git', 'init';
+	return False unless run-check 'vhosts/stuff/more/yet-another-repo', '../../../..', 'git', 'add', 'had-enough.txt';
+	return False unless run-check 'vhosts/stuff/more/yet-another-repo', '../../../..', 'git', 'commit', '-m', 'Still here?';
+
 	chdir '../../../..';
 	return True;
 }

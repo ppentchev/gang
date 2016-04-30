@@ -12,7 +12,7 @@ use GANG::Test::Lib;
 
 use Test;
 
-plan 23;
+plan 31;
 
 ok setup-site, 'The test site was set up properly';
 
@@ -43,6 +43,8 @@ is $r.lines.elems, 1, 'gang/git/repo: git status --short output a single line';
 is $r.lines[0], ' D bar.txt', 'gang/git/repo: git status --short complained about the missing bar.txt';
 
 chdir '../../..';
+ok !'gang-stuff/git-removed'.IO.d, 'The git-removed GANG directory is not present yet';
+
 ok modify-origin-site, 'The origin site was modified';
 
 ok run-check('.', '.', 'perl6', '-I', 'lib', 'gang-boss.p6', 'sync-not-git', 'stuff'), 'The GANG backup was updated for the non-Git files';
@@ -56,3 +58,15 @@ is $r.exitcode, 0, 'stuff: git status --short succeeded';
 is $r.lines.elems, 0, 'stuff: git status --short output nothing';
 
 chdir '..';
+
+# Right, now let's remove some of the stuff
+ok run-check('.', '.', 'rm', '-rf', 'vhosts/stuff/repo/.git'), 'A test repository was removed';
+ok run-check('.', '.', 'perl6', '-I', 'lib', 'gang-boss.p6', 'sync-git', 'stuff'), 'The GANG backup was updated for the Git files';
+ok !'gang-stuff/git/repo/.git'.IO.d, 'The corresponding GANG repository was removed, too';
+ok 'gang-stuff/git/more/yet-another-repo/.git'.IO.d, 'The new GANG repository was added';
+
+my IO::Path:D @rm = 'gang-stuff/git-removed'.IO.dir;
+is @rm.elems, 1, 'The git-removed GANG directory was created with a single record';
+my IO::Path:D $base = @rm[0];
+ok $base.starts-with('gang-stuff/git-removed/002-'), 'The new record was created in generation 2';
+ok $base.child('repo/.git').d, 'The removed repository was backed up';
