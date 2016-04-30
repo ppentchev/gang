@@ -35,7 +35,7 @@ use GANG::Member;
 
 my Bool $debug;
 my Str $tstamp;
-our $VERSION = '0.1.0.dev478';
+our $VERSION = '0.1.0.dev485';
 
 sub debug(Str:D $s)
 {
@@ -54,6 +54,7 @@ Usage:	gang-boss [-v] -r=user@host -p=origin-path init path
 	gang-boss [-v] -l -p=origin-path init path
 	gang-boss [-v] sync-not-git path
 	gang-boss [-v] sync-git path
+	gang-boss [-v] clean-up path
 	gang-boss -V | -h
 
 	-h		display program usage information and exit
@@ -68,6 +69,8 @@ Commands:
 			location from a local copy at the specified path
 	sync-not-git	FIXME meow
 	sync-git	FIXME meow
+	clean-up	attempt to clean the backup directory up if another
+			command failed for some reason
 
 Suggested use:
 	rsync -a --delete u@h:rpath/ path/
@@ -90,18 +93,39 @@ sub tstamp-init()
 	$tstamp = ~DateTime.now;
 }
 
-sub gang-load-config(IO::Path:D $gang-path, Str:D $path) returns GANG::Config:D
+sub gang-load-config(IO::Path:D $gang-path, Str:D $path, Bool :$ignore-stage) returns GANG::Config:D
 {
 	my Str:D $fmt = $gang-path.child('format').slurp;
 	if $fmt ne "1.0\n" {
 		note-fatal "Unrecognized GANG backup format '$fmt.chomp()'";
 	}
-	if $gang-path.child('stage').e {
+	if $gang-path.child('stage').e && !$ignore-stage {
 		note-fatal "A GANG operation is in progress on $path: " ~ $gang-path.child('stage').slurp.chomp;
 	}
 
 	return GANG::Config.deserialize(
 	    from-json $gang-path.child('meta.json').slurp);
+}
+
+sub git-clean-up(Str:D :$path, Str:D :$cwd)
+{
+	debug "Resetting the files in $path to our last Git state, just in case";
+	chdir $path;
+	my Shell::Capture $r .= capture-check('git', 'reset', '--hard');
+	$r .= capture-check('git', 'status', '--short');
+	my Str:D @extra;
+	for $r.lines -> Str:D $line {
+		if $line !~~ /^ '??' \s+ $<path> = [ .* ] $$ / {
+			note-fatal "git status --short in $path returned an unexpected line: $line";
+		}
+		push @extra, ~$/<path>;
+	}
+	$r.capture-check('rm', '-rf', '--', $_) for @extra;
+	$r .= capture-check('git', 'status', '--short');
+	if $r.lines {
+		note-fatal "Could not clean up $path completely";
+	}
+	chdir $cwd;
 }
 
 multi sub MAIN(Bool :$h, Bool :$V)
@@ -188,29 +212,13 @@ multi sub MAIN('sync-not-git', Str $path, Bool :$v)
 	$cfg .= bump($tstamp);
 
 	# First let's make sure our copy is at least hopefully good
-	debug "Resetting the files in $path to our last Git state, just in case";
-	chdir $path;
-	my Shell::Capture $r .= capture-check('git', 'reset', '--hard');
-	$r .= capture-check('git', 'status', '--short');
-	my Str:D @extra;
-	for $r.lines -> Str:D $line {
-		if $line !~~ /^ '??' \s+ $<path> = [ .* ] $$ / {
-			note-fatal "git status --short in $path returned an unexpected line: $line";
-		}
-		push @extra, ~$/<path>;
-	}
-	$r.capture-check('rm', '-rf', '--', $_) for @extra;
-	$r .= capture-check('git', 'status', '--short');
-	if $r.lines {
-		note-fatal "Could not clean up $path completely";
-	}
-	chdir $cwd;
+	git-clean-up :path($path), :cwd($cwd);
 
 	# OK, let's try to sync the stuff
 	my Str:D $source-prefix = $cfg.remote.defined?? $cfg.remote ~ ':'!! '';
 	my Str:D $source = $source-prefix ~ $cfg.origin ~ '/';
 	debug "Synching $source to $path/";
-	$r .= capture-check('rsync', '-az', '--delete', '--exclude', '.git*', $source, "$path/");
+	my Shell::Capture $r .= capture-check('rsync', '-az', '--delete', '--exclude', '.git*', $source, "$path/");
 	debug "- got $r.lines().elems() lines of rsync output";
 
 	debug "Let's see what has changed now";
@@ -310,4 +318,23 @@ multi sub MAIN('sync-git', Str $path, Bool :$v)
 
 	$gang-path.child('meta.json').spurt(to-json($cfg.serialize) ~ "\n");
 	$gang-abs.IO.child('stage').unlink;
+}
+
+multi sub MAIN('clean-up', Str $path, Bool :$v)
+{
+	$debug = $v;
+	tstamp-init;
+
+	my Str:D $cwd = '.'.IO.abspath;
+	my Str:D $path-abs = $path.IO.abspath;
+	my IO::Path:D $gang-path = "gang-$path".IO;
+	my Str:D $gang-abs = $gang-path.abspath;
+
+	my GANG::Config:D $cfg = gang-load-config $gang-path, $path, :ignore-stage;
+	$gang-path.child('stage').spurt('clean-up');
+
+	debug "Cleaning up in $path";
+	git-clean-up :path($path), :cwd($cwd);
+
+	$gang-path.child('stage').unlink;
 }

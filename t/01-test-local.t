@@ -12,7 +12,7 @@ use GANG::Test::Lib;
 
 use Test;
 
-plan 31;
+plan 43;
 
 ok setup-site, 'The test site was set up properly';
 
@@ -44,6 +44,26 @@ is $r.lines[0], ' D bar.txt', 'gang/git/repo: git status --short complained abou
 
 chdir '../../..';
 ok !'gang-stuff/git-removed'.IO.d, 'The git-removed GANG directory is not present yet';
+
+ok modify-backup-dir, 'The backup directory was modified';
+ok 'gang-stuff/stage'.IO.f, 'The in-progress flag file was created';
+ok 'stuff/whaa.txt'.IO.f, 'A new file was created';
+ok !'stuff/foo.txt'.IO.f, 'An existing file was removed';
+chdir 'stuff';
+$r .= capture('env', 'LANG=C', 'git', 'status', '--short');
+is $r.exitcode, 0, 'gang/git/repo: git status --short succeeded';
+is $r.lines.elems, 2, 'gang/git/repo: git status --short output two lines';
+chdir '..';
+
+ok run-check('.', '.', 'perl6', '-I', 'lib', 'gang-boss.p6', 'clean-up', 'stuff'), 'The GANG backup was cleaned up';
+ok !'gang-stuff/stage'.IO.f, 'The in-progress flag file was created';
+ok !'stuff/whaa.txt'.IO.f, 'A new file was created';
+ok 'stuff/foo.txt'.IO.f, 'An existing file was removed';
+chdir 'stuff';
+$r .= capture('env', 'LANG=C', 'git', 'status', '--short');
+is $r.exitcode, 0, 'stuff: git status --short succeeded';
+is $r.lines.elems, 0, 'stuff: git status --short output nothing';
+chdir '..';
 
 ok modify-origin-site, 'The origin site was modified';
 

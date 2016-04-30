@@ -45,6 +45,14 @@ sub setup-site() is export returns Bool:D
 	return True;
 }
 
+sub modify-backup-dir() is export returns Bool:D
+{
+	'stuff/foo.txt'.IO.unlink;
+	'stuff/whaa.txt'.IO.spurt("What is this file?\n");
+	'gang-stuff/stage'.IO.spurt('hmm');
+	return True;
+}
+
 sub modify-origin-site() is export returns Bool:D
 {
 	chdir 'vhosts/stuff';
