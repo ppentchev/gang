@@ -299,7 +299,7 @@ multi sub MAIN('sync-git', Str $path, Bool :$v)
 	for @new-git-files -> Str:D $git-path {
 		debug "- $git-path";
 		my Str:D $source-prefix = $cfg.remote.defined?? $cfg.remote ~ ':'!! '';
-		my Str:D @cmd = ('rsync', '-a', '--delete',
+		my Str:D @cmd = ('rsync', '-az', '--delete',
 		    $source-prefix ~ $src.child($git-path) ~ '/',
 		    $dst.child($git-path) ~ '/');
 		$dst.child($git-path).parent.mkdir;
