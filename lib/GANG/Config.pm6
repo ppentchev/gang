@@ -10,3 +10,14 @@ has Str:D $.origin is required;
 
 has UInt:D $.generation is required;
 has Str:D $.tstamp is required;
+
+method bump(Str:D $new-tstamp) returns GANG::Config:D
+{
+	return GANG::Config.new(
+	    :path($!path),
+	    :remote($!remote),
+	    :origin($!origin),
+	    :generation($!generation + 1),
+	    :tstamp($new-tstamp),
+	);
+}

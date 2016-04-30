@@ -184,6 +184,8 @@ multi sub MAIN('sync-not-git', Str $path, Bool :$v)
 	my Str:D $gang-abs = $gang-path.abspath;
 
 	my GANG::Config:D $cfg = gang-load-config $gang-path, $path;
+	$gang-path.child('stage').spurt('sync-not-git');
+	$cfg .= bump($tstamp);
 
 	# First let's make sure our copy is at least hopefully good
 	debug "Resetting the files in $path to our last Git state, just in case";
@@ -244,6 +246,9 @@ multi sub MAIN('sync-not-git', Str $path, Bool :$v)
 		debug "Nothing changed in $path";
 	}
 	chdir $cwd;
+
+	$gang-path.child('meta.json').spurt(to-json($cfg.serialize) ~ "\n");
+	$gang-abs.IO.child('stage').unlink;
 }
 
 multi sub MAIN('sync-git', Str $path, Bool :$v)
