@@ -112,7 +112,15 @@ sub git-clean-up(Str:D :$path, Str:D :$cwd)
 	debug "Resetting the files in $path to our last Git state, just in case";
 	chdir $path;
 	my Shell::Capture $r .= capture-check('git', 'reset', '--hard');
-	$r .= capture-check('git', 'clean', '-d', '-f');
+	$r .= capture-check('git', 'status', '--short');
+	my Str:D @extra;
+	for $r.lines -> Str:D $line {
+		if $line !~~ /^ '??' \s+ $<path> = [ .* ] $$ / {
+			note-fatal "git status --short in $path returned an unexpected line: $line";
+		}
+		push @extra, ~$/<path>;
+	}
+	$r.capture-check('rm', '-rf', '--', $_) for @extra;
 	$r .= capture-check('git', 'status', '--short');
 	if $r.lines {
 		note-fatal "Could not clean up $path completely";
