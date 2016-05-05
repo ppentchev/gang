@@ -12,17 +12,27 @@ use GANG::Test::Lib;
 
 use Test;
 
-plan 43;
+plan 51;
+
+my @exclude = ('ignored.txt', '/weird.txt').map('--exclude=' ~ *);
 
 ok setup-site, 'The test site was set up properly';
 
 ok run-check('.', '.', 'rm', '-rf', 'stuff'), 'The copy of the test site was cleaned up';
 mkdir 'stuff';
-ok run-check('.', '.', 'rsync', '-a', '--delete', 'vhosts/stuff/', 'stuff/'), 'The copy of the test site was created';
+ok run-check('.', '.', 'rsync', '-a', '--delete', 'vhosts/stuff/',
+    |@exclude, 'stuff/'),
+   'The copy of the test site was created';
 ok 'stuff/foo.txt'.IO.f, 'The copy of the test site contains a test file';
+ok !'stuff/ignored.txt'.IO.f, 'The copy of the test suite does not contain an ignored file';
+ok !'stuff/more/ignored.txt'.IO.f, 'The copy of the test suite does not contain another ignored file';
+ok !'stuff/weird.txt'.IO.f, 'The copy of the test suite does not contain the top-level weird file';
+ok 'stuff/more/weird.txt'.IO.f, 'The copy of the test suite contains the non-top-level weird file';
 
 ok run-check('.', '.', 'rm', '-rf', 'gang-stuff'), 'The GANG copy of the test site was cleaned up';
-ok run-check('.', '.', 'perl6', '-I', 'lib', 'gang-boss.p6', '--origin=vhosts/stuff', 'init', 'stuff'), 'The GANG backup was created';
+ok run-check('.', '.', 'perl6', '-I', 'lib', 'gang-boss.p6', '--origin=vhosts/stuff',
+    |@exclude, 'init', 'stuff'),
+   'The GANG backup was created';
 my Str:D $s = 'gang-stuff/format'.IO.slurp;
 is $s, "1.0\n", 'The GANG backup has the correct "format" file.';
 ok !'gang-stuff/stage'.IO.e, 'The GANG stage lockfile was removed';
@@ -68,6 +78,10 @@ chdir '..';
 ok modify-origin-site, 'The origin site was modified';
 
 ok run-check('.', '.', 'perl6', '-I', 'lib', 'gang-boss.p6', 'sync-not-git', 'stuff'), 'The GANG backup was updated for the non-Git files';
+ok !'stuff/ignored.txt'.IO.f, 'The copy of the test suite still does not contain an ignored file';
+ok !'stuff/more/ignored.txt'.IO.f, 'The copy of the test suite still does not contain another ignored file';
+ok !'stuff/weird.txt'.IO.f, 'The copy of the test suite still does not contain the top-level weird file';
+ok 'stuff/more/weird.txt'.IO.f, 'The copy of the test suite still contains the non-top-level weird file';
 ok !'stuff/more/another-repo/hell.txt'.IO.e, 'The hell.txt file was removed';
 is 'stuff/foo.txt'.IO.slurp, "This is only a test\n", 'The foo.txt file was updated';
 is 'stuff/repo/bar.txt'.IO.slurp, "Still only a test\n", 'The bar.txt file was updated';

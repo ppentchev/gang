@@ -21,6 +21,8 @@ sub setup-site() is export returns Bool:D
 	chdir 'vhosts/stuff';
 
 	'foo.txt'.IO.spurt("This is a test.\n");
+	'ignored.txt'.IO.spurt("Please ignore this...\n");
+	'weird.txt'.IO.spurt("Please ignore this, too...\n");
 
 	mkdir 'repo';
 	chdir 'repo';
@@ -33,6 +35,8 @@ sub setup-site() is export returns Bool:D
 	mkdir 'more';
 	chdir 'more';
 	'whee.txt'.IO.spurt("Hello, Dolly!\n");
+	'ignored.txt'.IO.spurt("Please ignore this...\n");
+	'weird.txt'.IO.spurt("Please do not ignore this...\n");
 
 	mkdir 'another-repo';
 	chdir 'another-repo';

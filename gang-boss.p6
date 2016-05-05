@@ -49,13 +49,15 @@ sub version()
 sub USAGE(Bool:D $err = True)
 {
 	my Str:D $s = q:to/EOUSAGE/;
-Usage:	gang-boss [-v] --remote=user@host --origin=remotepath init path
-	gang-boss [-v] --origin=localpath init path
+Usage:	gang-boss [-v] [--exclude=rsync-exclude-spec] --remote=user@host --origin=remotepath init path
+	gang-boss [-v] [--exclude=rsync-exclude-spec] --origin=localpath init path
 	gang-boss [-v] sync-not-git path
 	gang-boss [-v] sync-git path
 	gang-boss [-v] clean-up path
 	gang-boss -V | -h
 
+	--exclude	specify a pattern to be excluded when rsync'ing
+			(may be specified more than once)
 	-h		display program usage information and exit
 	--origin	FIXME meow
 	--remote	FIXME meow
@@ -71,8 +73,8 @@ Commands:
 			command failed for some reason
 
 Suggested use:
-	rsync -a --delete u@h:rpath/ path/
-	gang-boss --remote u@h --origin rpath init path
+	rsync -a --delete --exclude=/logs --exclude=.well-known u@h:rpath/ path/
+	gang-boss --remote u@h --origin rpath --exclude=/logs --exclude=.well-known init path
 
 	gang-boss sync-not-git path
 	gang-boss sync-git path
@@ -118,7 +120,7 @@ sub git-clean-up(Str:D :$path, Str:D :$cwd)
 	chdir $cwd;
 }
 
-sub do-init(Str:D :$path, Str :$remote, Str:D :$origin)
+sub do-init(Str:D :$path, Str :$remote, Str:D :$origin, :@exclude)
 {
 	my IO::Path:D $gang-dir = $path.IO.parent.child("gang-" ~ $path.IO.basename);
 	my Str:D $gang-abs = $gang-dir.abspath;
@@ -132,6 +134,7 @@ sub do-init(Str:D :$path, Str :$remote, Str:D :$origin)
 		:$origin,
 		:generation(0),
 		:$tstamp,
+		:@exclude,
 	);
 
 	$gang-dir.child('stage').spurt("init\n");
@@ -173,20 +176,20 @@ multi sub MAIN(Bool :$h, Bool :$V)
 	USAGE False if $h;
 }
 
-multi sub MAIN('init', File-Dir $path, Bool :$v, Str:D :$remote, Str:D :$origin)
+multi sub MAIN('init', File-Dir $path, Bool :$v, Str:D :$remote, Str:D :$origin, :@exclude)
 {
 	$debug = $v;
 	tstamp-init;
 
-	do-init :$path, :$remote, :$origin;
+	do-init :$path, :$remote, :$origin, :@exclude;
 }
 
-multi sub MAIN('init', File-Dir $path, Bool :$v, File-Dir :$origin)
+multi sub MAIN('init', File-Dir $path, Bool :$v, File-Dir :$origin, :@exclude)
 {
 	$debug = $v;
 	tstamp-init;
 
-	do-init :$path, :remote(Str), :$origin;
+	do-init :$path, :remote(Str), :$origin, :@exclude;
 }
 
 multi sub MAIN('init', File-Dir $path, Bool :$v, File-Non-Dir :$origin)
@@ -220,7 +223,10 @@ multi sub MAIN('sync-not-git', File-Dir $path, Bool :$v)
 	my Str:D $source-prefix = $cfg.remote.defined?? $cfg.remote ~ ':'!! '';
 	my Str:D $source = $source-prefix ~ $cfg.origin ~ '/';
 	debug "Synching $source to $path/";
-	my Shell::Capture $r .= capture-check('rsync', '-az', '--delete', '--exclude', '.git*', $source, "$path/");
+	my Shell::Capture $r .= capture-check('rsync', '-az', '--delete',
+	    '--exclude', '.git*',
+	    |$cfg.exclude.map('--exclude=' ~ *),
+	    $source, "$path/");
 	debug "- got $r.lines().elems() lines of rsync output";
 
 	debug "Let's see what has changed now";
