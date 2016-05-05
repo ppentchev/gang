@@ -118,27 +118,8 @@ sub git-clean-up(Str:D :$path, Str:D :$cwd)
 	chdir $cwd;
 }
 
-multi sub MAIN(Bool :$h, Bool :$V)
+sub do-init(Str:D :$path, Str :$remote, Str:D :$origin)
 {
-	USAGE unless $h || $V;
-	version if $V;
-	USAGE False if $h;
-}
-
-multi sub MAIN('init', Str $path, Bool :$v, Str :$remote, Str :$origin)
-{
-	$debug = $v;
-	tstamp-init;
-
-	note-fatal "The origin path must be specified with --origin" unless
-	    $origin.defined;
-
-	note-fatal "The local mirror directory '$path' does not exist" unless
-	    $path.IO.d;
-
-	note-fatal "The local origin directory '$origin' does not exist" unless
-	    $remote.defined || $origin.IO.d;
-
 	my IO::Path:D $gang-dir = $path.IO.parent.child("gang-" ~ $path.IO.basename);
 	my Str:D $gang-abs = $gang-dir.abspath;
 	note-fatal "The GANG directory $gang-dir already exists" if $gang-dir.e;
@@ -182,7 +163,43 @@ multi sub MAIN('init', Str $path, Bool :$v, Str :$remote, Str :$origin)
 	debug 'Done!';
 }
 
-multi sub MAIN('sync-not-git', Str $path, Bool :$v)
+subset File-Dir of Str:D where *.IO.d;
+subset File-Non-Dir of Str:D where !*.IO.d;
+
+multi sub MAIN(Bool :$h, Bool :$V)
+{
+	USAGE unless $h || $V;
+	version if $V;
+	USAGE False if $h;
+}
+
+multi sub MAIN('init', File-Dir $path, Bool :$v, Str:D :$remote, Str:D :$origin)
+{
+	$debug = $v;
+	tstamp-init;
+
+	do-init :$path, :$remote, :$origin;
+}
+
+multi sub MAIN('init', File-Dir $path, Bool :$v, File-Dir :$origin)
+{
+	$debug = $v;
+	tstamp-init;
+
+	do-init :$path, :remote(Str), :$origin;
+}
+
+multi sub MAIN('init', File-Dir $path, Bool :$v, File-Non-Dir :$origin)
+{
+	note-fatal "The local origin directory '$origin' does not exist";
+}
+
+multi sub MAIN('init', File-Non-Dir $path, Bool :$v, Str :$remote, Str:D :$origin)
+{
+	note-fatal "The local mirror directory '$path' does not exist";
+}
+
+multi sub MAIN('sync-not-git', File-Dir $path, Bool :$v)
 {
 	$debug = $v;
 	tstamp-init;
@@ -244,7 +261,12 @@ multi sub MAIN('sync-not-git', Str $path, Bool :$v)
 	$gang-abs.IO.child('stage').unlink;
 }
 
-multi sub MAIN('sync-git', Str $path, Bool :$v)
+multi sub MAIN('sync-not-git', File-Non-Dir $path, Bool :$v)
+{
+	note-fatal "The local mirror directory '$path' does not exist";
+}
+
+multi sub MAIN('sync-git', File-Dir $path, Bool :$v)
 {
 	$debug = $v;
 	tstamp-init;
@@ -303,6 +325,11 @@ multi sub MAIN('sync-git', Str $path, Bool :$v)
 
 	$gang-path.child('meta.json').spurt(to-json($cfg.serialize) ~ "\n");
 	$gang-abs.IO.child('stage').unlink;
+}
+
+multi sub MAIN('sync-git', File-Non-Dir $path, Bool :$v)
+{
+	note-fatal "The local mirror directory '$path' does not exist";
 }
 
 multi sub MAIN('clean-up', Str $path, Bool :$v)
