@@ -25,7 +25,6 @@
 # SUCH DAMAGE.
 
 use v6;
-use strict;
 
 use JSON::Fast;
 
