@@ -22,7 +22,7 @@ ok run-check('.', '.', 'rsync', '-a', '--delete', 'vhosts/stuff/', 'stuff/'), 'T
 ok 'stuff/foo.txt'.IO.f, 'The copy of the test site contains a test file';
 
 ok run-check('.', '.', 'rm', '-rf', 'gang-stuff'), 'The GANG copy of the test site was cleaned up';
-ok run-check('.', '.', 'perl6', '-I', 'lib', 'gang-boss.p6', '-l', '-p=vhosts/stuff', 'init', 'stuff'), 'The GANG backup was created';
+ok run-check('.', '.', 'perl6', '-I', 'lib', 'gang-boss.p6', '--origin=vhosts/stuff', 'init', 'stuff'), 'The GANG backup was created';
 my Str:D $s = 'gang-stuff/format'.IO.slurp;
 is $s, "1.0\n", 'The GANG backup has the correct "format" file.';
 ok !'gang-stuff/stage'.IO.e, 'The GANG stage lockfile was removed';

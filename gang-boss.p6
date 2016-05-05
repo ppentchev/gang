@@ -34,7 +34,7 @@ use GANG::Member;
 
 my Bool $debug;
 my Str $tstamp;
-our $VERSION = '0.1.0.dev485';
+our $VERSION = '0.1.0.dev490';
 
 sub debug(Str:D $s)
 {
@@ -49,17 +49,16 @@ sub version()
 sub USAGE(Bool:D $err = True)
 {
 	my Str:D $s = q:to/EOUSAGE/;
-Usage:	gang-boss [-v] -r=user@host -p=origin-path init path
-	gang-boss [-v] -l -p=origin-path init path
+Usage:	gang-boss [-v] --remote=user@host --origin=remotepath init path
+	gang-boss [-v] --origin=localpath init path
 	gang-boss [-v] sync-not-git path
 	gang-boss [-v] sync-git path
 	gang-boss [-v] clean-up path
 	gang-boss -V | -h
 
 	-h		display program usage information and exit
-	-l		FIXME meow
-	-p		FIXME meow
-	-u		FIXME meow
+	--origin	FIXME meow
+	--remote	FIXME meow
 	-V		display program version information and exit
 	-v		verbose operation; display diagnostic output
 
@@ -73,7 +72,7 @@ Commands:
 
 Suggested use:
 	rsync -a --delete u@h:rpath/ path/
-	gang-boss -u u@h -p rpath init path
+	gang-boss --remote u@h --origin rpath init path
 
 	gang-boss sync-not-git path
 	gang-boss sync-git path
@@ -126,24 +125,19 @@ multi sub MAIN(Bool :$h, Bool :$V)
 	USAGE False if $h;
 }
 
-multi sub MAIN('init', Str $path, Bool :$v, Bool :$l, Str :$r, Str :$p)
+multi sub MAIN('init', Str $path, Bool :$v, Str :$remote, Str :$origin)
 {
 	$debug = $v;
 	tstamp-init;
 
-	note-fatal "The -r and -l options are mutually exclusive" if
-	    $r.defined && $l;
-	note-fatal "At least one of -r and -l must be specified" unless
-	    $r.defined || $l;
-	note-fatal "The origin path must be specified with -p" unless
-	    $p.defined;
-	my Str:D $origin = $p;
+	note-fatal "The origin path must be specified with --origin" unless
+	    $origin.defined;
 
 	note-fatal "The local mirror directory '$path' does not exist" unless
 	    $path.IO.d;
 
-	note-fatal "The local origin directory '$p' does not exist" if
-	    $l && !$p.IO.d;
+	note-fatal "The local origin directory '$origin' does not exist" unless
+	    $remote.defined || $origin.IO.d;
 
 	my IO::Path:D $gang-dir = $path.IO.parent.child("gang-" ~ $path.IO.basename);
 	my Str:D $gang-abs = $gang-dir.abspath;
@@ -152,11 +146,11 @@ multi sub MAIN('init', Str $path, Bool :$v, Bool :$l, Str :$r, Str :$p)
 	$gang-dir.mkdir;
 	
 	my GANG::Config $cfg .= new(
-		:path($path),
-		:remote($r),
-		:origin($origin),
+		:$path,
+		:$remote,
+		:$origin,
 		:generation(0),
-		:tstamp($tstamp),
+		:$tstamp,
 	);
 
 	$gang-dir.child('stage').spurt("init\n");
