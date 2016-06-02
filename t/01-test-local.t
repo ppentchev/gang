@@ -12,7 +12,7 @@ use GANG::Test::Lib;
 
 use Test;
 
-plan 51;
+plan 54;
 
 my @exclude = ('ignored.txt', '/weird.txt').map('--exclude=' ~ *);
 
@@ -28,6 +28,7 @@ ok !'stuff/ignored.txt'.IO.f, 'The copy of the test suite does not contain an ig
 ok !'stuff/more/ignored.txt'.IO.f, 'The copy of the test suite does not contain another ignored file';
 ok !'stuff/weird.txt'.IO.f, 'The copy of the test suite does not contain the top-level weird file';
 ok 'stuff/more/weird.txt'.IO.f, 'The copy of the test suite contains the non-top-level weird file';
+ok 'stuff/.git-foo.txt'.IO.f, 'The copy of the test suite contains the Git-like file';
 
 ok run-check('.', '.', 'rm', '-rf', 'gang-stuff'), 'The GANG copy of the test site was cleaned up';
 ok run-check('.', '.', 'perl6', '-I', 'lib', 'gang-boss.p6', '--origin=vhosts/stuff',
@@ -40,6 +41,8 @@ ok !'gang-stuff/stage'.IO.e, 'The GANG stage lockfile was removed';
 ok 'stuff/.git'.IO.d, 'The GANG backup has a Git repository';
 ok !'stuff/repo/.git'.IO.d, 'The GANG backup does not have the Git repository from the site';
 ok 'gang-stuff/git/repo/.git'.IO.d, 'The GANG backup moved a Git repository';
+ok !'stuff/.git-foo.txt'.IO.f, 'The GANG backup does not have the Git-like file';
+ok 'gang-stuff/git/.git-foo.txt'.IO.f, 'The GANG backup moved the Git-like file';
 
 chdir 'stuff';
 my Shell::Capture:D $r .= capture('env', 'LANG=C', 'git', 'status', '--short');

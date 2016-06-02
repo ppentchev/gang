@@ -23,6 +23,7 @@ sub setup-site() is export returns Bool:D
 	'foo.txt'.IO.spurt("This is a test.\n");
 	'ignored.txt'.IO.spurt("Please ignore this...\n");
 	'weird.txt'.IO.spurt("Please ignore this, too...\n");
+	'.git-foo.txt'.IO.spurt("Is this the real life?  Is it just fantasy?\n");
 
 	mkdir 'repo';
 	chdir 'repo';

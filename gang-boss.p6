@@ -153,7 +153,7 @@ sub do-init(Str:D :$path, Str :$remote, Str:D :$origin, :@exclude)
 	debug "Looking for Git repositories and config files in $path";
 	$gang-dir.child('git').mkdir;
 	my GANG::Member $memb .= new(:path($path));
-	my Str:D @git-files = $memb.find-git-files;
+	my Str:D @git-files = $memb.find-git-files.map(*.name);
 	debug "Found @git-files.elems() Git directories and/or files";
 	for @git-files -> Str:D $git {
 		debug "- $path/$git -> $gang-dir/git/$git";
@@ -291,21 +291,21 @@ multi sub MAIN('sync-git', File-Dir $path, Bool :$v)
 	my Str:D $gang-abs = $gang-path.abspath;
 
 	my GANG::Config:D $cfg = gang-load-config $gang-path, $path;
-	$gang-path.child('stage').spurt('sync-not-git');
+	$gang-path.child('stage').spurt('sync-git');
 	$cfg .= bump($tstamp);
 
 	# OK, figure out what's the state of the Git repositories
-	my Str:D @current-git-files = GANG::Member.new(:path(~$gang-path.child('git'))).find-git-files;
-	my Str:D @new-git-files;
-	if $cfg.remote.defined {
-		...
-	} else {
-		@new-git-files = GANG::Member.new(:path($cfg.origin)).find-git-files;
-	}
+	my GANG::Git-File:D @current-git-files = GANG::Member.new(
+	    :path(~$gang-path.child('git')))
+	    .find-git-files;
+	my GANG::Git-File:D @new-git-files = GANG::Member.new(
+	    :path($cfg.origin),
+	    :remote($cfg.remote))
+	    .find-git-files;
 	debug "Got @current-git-files.elems() stored Git-related files, @new-git-files.elems() at the new site";
 
 	# Remove the ones that are no longer relevant
-	my Set $removed = Set(@current-git-files) ∖ Set(@new-git-files);
+	my Set $removed = Set(@current-git-files.map(*.name)) ∖ Set(@new-git-files.map(*.name));
 	if $removed {
 		debug "- removing $removed.elems() Git-related files";
 		my IO::Path:D $src = $gang-path.child('git');
@@ -325,15 +325,16 @@ multi sub MAIN('sync-git', File-Dir $path, Bool :$v)
 	debug "Synching Git files and repositories";
 	my IO::Path:D $src = $cfg.origin.IO;
 	my IO::Path:D $dst = $gang-path.child('git');
-	for @new-git-files -> Str:D $git-path {
-		debug "- $git-path";
+	for @new-git-files -> GANG::Git-File:D $git-path {
+		my Str:D $dir-suffix = $git-path.is-dir?? '/'!! '';
+		debug "- $git-path.name(): suffix '$dir-suffix'";
 		my Str:D $source-prefix = $cfg.remote.defined?? $cfg.remote ~ ':'!! '';
 		my Str:D @cmd = ('rsync', '-az', '--delete',
-		    $source-prefix ~ $src.child($git-path) ~ '/',
-		    $dst.child($git-path) ~ '/');
-		$dst.child($git-path).parent.mkdir;
+		    $source-prefix ~ $src.child($git-path.name) ~ $dir-suffix,
+		    $dst.child($git-path.name) ~ $dir-suffix);
+		$dst.child($git-path.name).parent.mkdir;
 		my Shell::Capture $r .= capture-check(
-		    :message("Could not sync the $git-path Git artifact"),
+		    :message("Could not sync the $git-path.name() Git artifact"),
 		    |@cmd);
 	}
 
