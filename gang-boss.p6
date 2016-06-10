@@ -262,9 +262,26 @@ multi sub MAIN('sync-not-git', File-Dir $path, Bool :$v)
 		}
 	}
 	if %changed<add> || %changed<rm> {
+		sub git-xargs(Str:D $subcmd)
+		{
+			my Proc:D $xargs = run 'xargs', '-0', 'git', $subcmd, '--', :in, :out;
+
+			$xargs.in.print("$_\0") for |%changed{$subcmd};
+			my Proc:D $iproc = $xargs.in.close;
+			my Int:D $ires = $iproc.exitcode;
+
+			my $ignored = $xargs.out.lines;
+			my Proc:D $oproc = $xargs.out.close;
+			my Int:D $ores = $oproc.exitcode;
+
+			my Int:D $res = $ires || $ores;
+			note-fatal "Could not update the non-Git files: 'xargs git $subcmd' exited with code $res"
+			    unless $res == 0;
+		}
+
 		debug "%changed<add>.elems() file(s) to add, %changed<rm>.elems() file(s) to remove";
-		$r .= capture-check('git', 'add', '--', $_) for |%changed<add>;
-		$r .= capture-check('git', 'rm', '--', $_) for |%changed<rm>;
+		git-xargs 'add' if %changed<add>;
+		git-xargs 'rm' if %changed<rm>;
 		$r .= capture-check('git', 'commit', '-m', "GANG: recording changes for $tstamp");
 	} else {
 		debug "Nothing changed in $path";
