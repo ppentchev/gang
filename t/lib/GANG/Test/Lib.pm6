@@ -4,13 +4,17 @@ use GANG::Lib;
 
 sub run-check(Str:D $path, Str:D $back, *@cmd) is export returns Bool:D
 {
-	my Shell::Capture $r .= capture(|@cmd);
-	if $r.exitcode != 0 {
+	my Bool:D $res = True;
+
+	sub fail(Shell::Capture:D $c, *@cmd)
+	{
 		note "'" ~ @cmd ~ "' failed in $path";
 		chdir $back;
-		return False;
+		$res = False;
 	}
-	return True;
+
+	Shell::Capture.capture-check(:&fail, |@cmd);
+	return $res;
 }
 
 sub setup-site() is export returns Bool:D
