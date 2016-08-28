@@ -14,7 +14,7 @@ use Test;
 
 plan 54;
 
-my @exclude = ('ignored.txt', '/weird.txt').map('--exclude=' ~ *);
+my @exclude = ('ignored.txt', '/weird "file".txt').map('--exclude=' ~ *);
 
 ok setup-site, 'The test site was set up properly';
 
@@ -26,8 +26,8 @@ ok run-check('.', '.', 'rsync', '-a', '--delete', 'vhosts/stuff/',
 ok 'stuff/foo.txt'.IO.f, 'The copy of the test site contains a test file';
 ok !'stuff/ignored.txt'.IO.f, 'The copy of the test suite does not contain an ignored file';
 ok !'stuff/more/ignored.txt'.IO.f, 'The copy of the test suite does not contain another ignored file';
-ok !'stuff/weird.txt'.IO.f, 'The copy of the test suite does not contain the top-level weird file';
-ok 'stuff/more/weird.txt'.IO.f, 'The copy of the test suite contains the non-top-level weird file';
+ok !'stuff/weird "file".txt'.IO.f, 'The copy of the test suite does not contain the top-level weird file';
+ok 'stuff/more/weird "file".txt'.IO.f, 'The copy of the test suite contains the non-top-level weird file';
 ok 'stuff/.git-foo.txt'.IO.f, 'The copy of the test suite contains the Git-like file';
 
 ok run-check('.', '.', 'rm', '-rf', 'gang-stuff'), 'The GANG copy of the test site was cleaned up';
@@ -45,12 +45,12 @@ ok !'stuff/.git-foo.txt'.IO.f, 'The GANG backup does not have the Git-like file'
 ok 'gang-stuff/git/.git-foo.txt'.IO.f, 'The GANG backup moved the Git-like file';
 
 chdir 'stuff';
-my Shell::Capture:D $r .= capture('env', 'LANG=C', 'git', 'status', '--short');
+my Shell::Capture:D $r .= capture('env', 'LANG=C', 'git', 'status', '--short', 'z', :nl("\0"));
 is $r.exitcode, 0, 'stuff: git status --short succeeded';
 is $r.lines.elems, 0, 'stuff: git status --short output nothing';
 
 chdir '../gang-stuff/git/repo';
-$r .= capture('env', 'LANG=C', 'git', 'status', '--short');
+$r .= capture('env', 'LANG=C', 'git', 'status', '--short', '-z', :nl("\0"));
 is $r.exitcode, 0, 'gang/git/repo: git status --short succeeded';
 is $r.lines.elems, 1, 'gang/git/repo: git status --short output a single line';
 is $r.lines[0], ' D bar.txt', 'gang/git/repo: git status --short complained about the missing bar.txt';
@@ -60,20 +60,20 @@ ok !'gang-stuff/git-removed'.IO.d, 'The git-removed GANG directory is not presen
 
 ok modify-backup-dir, 'The backup directory was modified';
 ok 'gang-stuff/stage'.IO.f, 'The in-progress flag file was created';
-ok 'stuff/whaa.txt'.IO.f, 'A new file was created';
+ok 'stuff/what is this.txt'.IO.f, 'A new file was created';
 ok !'stuff/foo.txt'.IO.f, 'An existing file was removed';
 chdir 'stuff';
-$r .= capture('env', 'LANG=C', 'git', 'status', '--short');
+$r .= capture('env', 'LANG=C', 'git', 'status', '--short', '-z', :nl("\0"));
 is $r.exitcode, 0, 'gang/git/repo: git status --short succeeded';
 is $r.lines.elems, 2, 'gang/git/repo: git status --short output two lines';
 chdir '..';
 
 ok run-check('.', '.', 'perl6', '-I', 'lib', 'gang-boss.p6', 'clean-up', 'stuff'), 'The GANG backup was cleaned up';
 ok !'gang-stuff/stage'.IO.f, 'The in-progress flag file was created';
-ok !'stuff/whaa.txt'.IO.f, 'A new file was created';
+ok !'stuff/what is this.txt'.IO.f, 'A new file was created';
 ok 'stuff/foo.txt'.IO.f, 'An existing file was removed';
 chdir 'stuff';
-$r .= capture('env', 'LANG=C', 'git', 'status', '--short');
+$r .= capture('env', 'LANG=C', 'git', 'status', '--short', '-z', :nl("\0"));
 is $r.exitcode, 0, 'stuff: git status --short succeeded';
 is $r.lines.elems, 0, 'stuff: git status --short output nothing';
 chdir '..';
@@ -83,14 +83,14 @@ ok modify-origin-site, 'The origin site was modified';
 ok run-check('.', '.', 'perl6', '-I', 'lib', 'gang-boss.p6', 'sync-not-git', 'stuff'), 'The GANG backup was updated for the non-Git files';
 ok !'stuff/ignored.txt'.IO.f, 'The copy of the test suite still does not contain an ignored file';
 ok !'stuff/more/ignored.txt'.IO.f, 'The copy of the test suite still does not contain another ignored file';
-ok !'stuff/weird.txt'.IO.f, 'The copy of the test suite still does not contain the top-level weird file';
-ok 'stuff/more/weird.txt'.IO.f, 'The copy of the test suite still contains the non-top-level weird file';
+ok !'stuff/weird "file".txt'.IO.f, 'The copy of the test suite still does not contain the top-level weird file';
+ok 'stuff/more/weird "file".txt'.IO.f, 'The copy of the test suite still contains the non-top-level weird file';
 ok !'stuff/more/another-repo/hell.txt'.IO.e, 'The hell.txt file was removed';
 is 'stuff/foo.txt'.IO.slurp, "This is only a test\n", 'The foo.txt file was updated';
 is 'stuff/repo/bar.txt'.IO.slurp, "Still only a test\n", 'The bar.txt file was updated';
 
 chdir 'stuff';
-$r .= capture('env', 'LANG=C', 'git', 'status', '--short');
+$r .= capture('env', 'LANG=C', 'git', 'status', '--short', '-z', :nl("\0"));
 is $r.exitcode, 0, 'stuff: git status --short succeeded';
 is $r.lines.elems, 0, 'stuff: git status --short output nothing';
 

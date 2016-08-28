@@ -26,7 +26,7 @@ sub setup-site() is export returns Bool:D
 
 	'foo.txt'.IO.spurt("This is a test.\n");
 	'ignored.txt'.IO.spurt("Please ignore this...\n");
-	'weird.txt'.IO.spurt("Please ignore this, too...\n");
+	'weird "file".txt'.IO.spurt("Please ignore this, too...\n");
 	'.git-foo.txt'.IO.spurt("Is this the real life?  Is it just fantasy?\n");
 
 	mkdir 'repo';
@@ -41,7 +41,7 @@ sub setup-site() is export returns Bool:D
 	chdir 'more';
 	'whee.txt'.IO.spurt("Hello, Dolly!\n");
 	'ignored.txt'.IO.spurt("Please ignore this...\n");
-	'weird.txt'.IO.spurt("Please do not ignore this...\n");
+	'weird "file".txt'.IO.spurt("Please do not ignore this...\n");
 
 	mkdir 'another-repo';
 	chdir 'another-repo';
@@ -57,7 +57,7 @@ sub setup-site() is export returns Bool:D
 sub modify-backup-dir() is export returns Bool:D
 {
 	'stuff/foo.txt'.IO.unlink;
-	'stuff/whaa.txt'.IO.spurt("What is this file?\n");
+	'stuff/what is this.txt'.IO.spurt("What is this file?\n");
 	'gang-stuff/stage'.IO.spurt('hmm');
 	return True;
 }
@@ -69,8 +69,8 @@ sub modify-origin-site() is export returns Bool:D
 
 	chdir 'repo';
 	'bar.txt'.IO.spurt("Still only a test\n");
-	'baz.txt'.IO.spurt("Here's a new one!\n");
-	return False unless run-check 'vhosts/stuff/repo', '../../..', 'git', 'add', 'bar.txt', 'baz.txt';
+	'baz "zzz".txt'.IO.spurt("Here's a new one!\n");
+	return False unless run-check 'vhosts/stuff/repo', '../../..', 'git', 'add', 'bar.txt', 'baz "zzz".txt';
 	return False unless run-check 'vhosts/stuff/repo', '../../..', 'git', 'commit', '-m', 'still';
 
 	chdir '../more/another-repo';
