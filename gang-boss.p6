@@ -34,7 +34,7 @@ use GANG::Member;
 
 my Bool $debug;
 my Str $tstamp;
-our $VERSION = '0.1.0.dev490';
+our $VERSION = '0.1.0.dev491';
 
 sub debug(Str:D $s)
 {
@@ -112,7 +112,7 @@ sub git-clean-up(Str:D :$path, Str:D :$cwd)
 	debug "Resetting the files in $path to our last Git state, just in case";
 	chdir $path;
 	my Shell::Capture $r .= capture-check('git', 'reset', '--hard');
-	$r .= capture-check('git', 'status', '--short');
+	$r .= capture-check('git', 'status', '--short', '-z', :nl("\0"));
 	my Str:D @extra;
 	for $r.lines -> Str:D $line {
 		if $line !~~ /^ '??' \s+ $<path> = [ .* ] $$ / {
@@ -121,7 +121,7 @@ sub git-clean-up(Str:D :$path, Str:D :$cwd)
 		push @extra, ~$/<path>;
 	}
 	$r.capture-check('rm', '-rf', '--', $_) for @extra;
-	$r .= capture-check('git', 'status', '--short');
+	$r .= capture-check('git', 'status', '--short', '-z', :nl("\0"));
 	if $r.lines {
 		note-fatal "Could not clean up $path completely";
 	}
@@ -239,7 +239,7 @@ multi sub MAIN('sync-not-git', File-Dir $path, Bool :$v)
 
 	debug "Let's see what has changed now";
 	chdir $path;
-	$r .= capture-check('git', 'status', '--short');
+	$r .= capture-check('git', 'status', '--short', '-z', :nl("\0"));
 	my %changed = :add([]), :rm([]);
 	for $r.lines -> Str:D $line {
 		my Str:D ($status, $fname) = $line.substr(0, 3), $line.substr(3);
