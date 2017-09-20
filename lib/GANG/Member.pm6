@@ -5,6 +5,8 @@ unit class GANG::Member;
 has Str:D $.path is required;
 has Str $.remote;
 
+use Shell::Capture;
+
 use GANG::Git-File;
 use GANG::Lib;
 

@@ -3,6 +3,7 @@
 use v6.c;
 
 use Serialize::Naive;
+use Shell::Capture;
 
 use lib 'lib';
 use lib 't/lib';

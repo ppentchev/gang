@@ -27,6 +27,7 @@
 use v6;
 
 use JSON::Fast;
+use Shell::Capture;
 
 use GANG::Config;
 use GANG::Lib;
@@ -131,7 +132,7 @@ sub git-clean-up(Str:D :$path, Str:D :$cwd)
 sub do-init(Str:D :$path, Str :$remote, Str:D :$origin, :@exclude)
 {
 	my IO::Path:D $gang-dir = $path.IO.parent.child("gang-" ~ $path.IO.basename);
-	my Str:D $gang-abs = $gang-dir.abspath;
+	my Str:D $gang-abs = $gang-dir.absolute;
 	note-fatal "The GANG directory $gang-dir already exists" if $gang-dir.e;
 	debug "Creating the GANG directory $gang-dir";
 	$gang-dir.mkdir;
@@ -215,10 +216,10 @@ multi sub MAIN('sync-not-git', File-Dir $path, Bool :$v)
 	$debug = $v;
 	tstamp-init;
 
-	my Str:D $cwd = '.'.IO.abspath;
-	my Str:D $path-abs = $path.IO.abspath;
+	my Str:D $cwd = '.'.IO.absolute;
+	my Str:D $path-abs = $path.IO.absolute;
 	my IO::Path:D $gang-path = "gang-$path".IO;
-	my Str:D $gang-abs = $gang-path.abspath;
+	my Str:D $gang-abs = $gang-path.absolute;
 
 	my GANG::Config:D $cfg = gang-load-config $gang-path, $path;
 	$gang-path.child('stage').spurt('sync-not-git');
@@ -267,8 +268,10 @@ multi sub MAIN('sync-not-git', File-Dir $path, Bool :$v)
 			my Proc:D $xargs = run 'xargs', '-0', 'git', $subcmd, '--', :in, :out;
 
 			$xargs.in.print("$_\0") for |%changed{$subcmd};
-			my Proc:D $iproc = $xargs.in.close;
-			my Int:D $ires = $iproc.exitcode;
+			my Proc $iproc = $xargs.in.close;
+			my Int:D $ires = $iproc.defined
+				?? $iproc.exitcode
+				!! 0;
 
 			my $ignored = $xargs.out.lines;
 			my Proc:D $oproc = $xargs.out.close;
@@ -302,10 +305,10 @@ multi sub MAIN('sync-git', File-Dir $path, Bool :$v)
 	$debug = $v;
 	tstamp-init;
 
-	my Str:D $cwd = '.'.IO.abspath;
-	my Str:D $path-abs = $path.IO.abspath;
+	my Str:D $cwd = '.'.IO.absolute;
+	my Str:D $path-abs = $path.IO.absolute;
 	my IO::Path:D $gang-path = "gang-$path".IO;
-	my Str:D $gang-abs = $gang-path.abspath;
+	my Str:D $gang-abs = $gang-path.absolute;
 
 	my GANG::Config:D $cfg = gang-load-config $gang-path, $path;
 	$gang-path.child('stage').spurt('sync-git');
@@ -369,10 +372,10 @@ multi sub MAIN('clean-up', Str $path, Bool :$v)
 	$debug = $v;
 	tstamp-init;
 
-	my Str:D $cwd = '.'.IO.abspath;
-	my Str:D $path-abs = $path.IO.abspath;
+	my Str:D $cwd = '.'.IO.absolute;
+	my Str:D $path-abs = $path.IO.absolute;
 	my IO::Path:D $gang-path = "gang-$path".IO;
-	my Str:D $gang-abs = $gang-path.abspath;
+	my Str:D $gang-abs = $gang-path.absolute;
 
 	my GANG::Config:D $cfg = gang-load-config $gang-path, $path, :ignore-stage;
 	$gang-path.child('stage').spurt('clean-up');

@@ -1,5 +1,7 @@
 unit module GANG::Test::Lib;
 
+use Shell::Capture;
+
 use GANG::Lib;
 
 sub run-check(Str:D $path, Str:D $back, *@cmd) is export returns Bool:D
