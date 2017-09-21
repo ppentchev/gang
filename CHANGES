@@ -1,5 +1,11 @@
 Change log for the Git-and-not-Git naive backup system
 
+0.1.0.dev994
+------------
+
+- port to recent Perl 6
+- add a test for adding/removing a large number of files at a time
+
 0.1.0.dev491
 ------------
 

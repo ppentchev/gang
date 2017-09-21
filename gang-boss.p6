@@ -35,7 +35,7 @@ use GANG::Member;
 
 my Bool $debug;
 my Str $tstamp;
-our $VERSION = '0.1.0.dev491';
+our $VERSION = '0.1.0.dev994';
 
 sub debug(Str:D $s)
 {
