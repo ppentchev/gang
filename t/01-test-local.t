@@ -13,7 +13,7 @@ use GANG::Test::Lib;
 
 use Test;
 
-plan 54;
+plan 67;
 
 my @exclude = ('ignored.txt', '/weird "file".txt').map('--exclude=' ~ *);
 
@@ -102,6 +102,59 @@ ok run-check('.', '.', 'rm', '-rf', 'vhosts/stuff/repo/.git'), 'A test repositor
 ok run-check('.', '.', 'perl6', '-I', 'lib', 'gang-boss.p6', 'sync-git', 'stuff'), 'The GANG backup was updated for the Git files';
 ok !'gang-stuff/git/repo/.git'.IO.d, 'The corresponding GANG repository was removed, too';
 ok 'gang-stuff/git/more/yet-another-repo/.git'.IO.d, 'The new GANG repository was added';
+
+# Let us add a whole lot more stuff now
+my $large = 'some-really-really-long-filenames-and-stuff-and-more-characters';
+my $large_base = "vhosts/stuff/$large";
+my $large_target = "stuff/$large";
+mkdir $large_base;
+ok $large_base.IO.d, 'The source directory for the really long filenames was created';
+for 0..^10 -> UInt:D $level_0 {
+	my $base_0 = "$large_base/even-more-really-really-long-stuff-and-more-characters-number-$level_0";
+	mkdir $base_0;
+	for 0..^10 -> UInt:D $level_1 {
+		my $base_1 = "$base_0/what-you-mean-there-are-even-more-and-more-and-more-number-$level_1";
+		mkdir $base_1;
+		for 0..^10 -> UInt:D $level_2 {
+			my $base_2 = "$base_1/what-you-mean-there-are-even-more-and-more-and-more-number-$level_2";
+			mkdir $base_2;
+			for 0..^10 -> UInt:D $fidx {
+				my $fname = "$base_2/here-is-a-really-long-filename-maybe-$fidx.txt";
+				$fname.IO.spurt("$level_0 $level_1 $level_2 $fidx");
+			}
+		}
+	}
+}
+ok run-check('.', '.', 'sh', '-c', '[ "$(find -- ' ~ "'$large_base'" ~ ' -type f | wc -l)" = 10000 ]'), 'A lot of files were created';
+ok !$large_target.IO.d, 'The destination directory for the really long filenames does not exist';
+ok run-check('.', '.', 'perl6', '-I', 'lib', 'gang-boss.p6', 'sync-not-git', 'stuff'), 'The GANG backup was updated for the non-Git files';
+ok $large_target.IO.d, 'The destination directory for the really long filenames was created';
+ok run-check('.', '.', 'sh', '-c', '[ "$(find -- ' ~ "'$large_target'" ~ ' -type f | wc -l)" = 10000 ]'), 'A lot of files were backed up';
+
+for 0..^10 -> UInt:D $level_0 {
+	my $base_0 = "$large_base/even-more-really-really-long-stuff-and-more-characters-number-$level_0";
+	mkdir $base_0;
+	for 0..^10 -> UInt:D $level_1 {
+		my $base_1 = "$base_0/what-you-mean-there-are-even-more-and-more-and-more-number-$level_1";
+		mkdir $base_1;
+		for 0..^10 -> UInt:D $level_2 {
+			my $base_2 = "$base_1/what-you-mean-there-are-even-more-and-more-and-more-number-$level_2";
+			mkdir $base_2;
+			for 0..^10 -> UInt:D $fidx {
+				my $fname = "$base_2/here-is-a-really-long-filename-maybe-whee-$fidx.txt";
+				$fname.IO.spurt("$level_0 $level_1 $level_2 $fidx");
+			}
+		}
+	}
+}
+ok run-check('.', '.', 'sh', '-c', '[ "$(find -- ' ~ "'$large_base'" ~ ' -type f | wc -l)" = 20000 ]'), 'A lot more files were created';
+ok run-check('.', '.', 'perl6', '-I', 'lib', 'gang-boss.p6', 'sync-not-git', 'stuff'), 'The GANG backup was updated for the non-Git files';
+ok run-check('.', '.', 'sh', '-c', '[ "$(find -- ' ~ "'$large_target'" ~ ' -type f | wc -l)" = 20000 ]'), 'A lot more files were backed up';
+
+ok run-check('.', '.', 'find', '--', $large_base, '-type', 'f', '-name', '*-maybe-whee-*.txt', '-delete'), 'Removed a lot of files';
+ok run-check('.', '.', 'sh', '-c', '[ "$(find -- ' ~ "'$large_base'" ~ ' -type f | wc -l)" = 10000 ]'), 'A lot of files were removed';
+ok run-check('.', '.', 'perl6', '-I', 'lib', 'gang-boss.p6', 'sync-not-git', 'stuff'), 'The GANG backup was updated for the non-Git files';
+ok run-check('.', '.', 'sh', '-c', '[ "$(find -- ' ~ "'$large_target'" ~ ' -type f | wc -l)" = 10000 ]'), 'A lot of files were removed from the backup';
 
 my IO::Path:D @rm = 'gang-stuff/git-removed'.IO.dir;
 is @rm.elems, 1, 'The git-removed GANG directory was created with a single record';
